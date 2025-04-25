@@ -1,7 +1,26 @@
 spring:
   application:
     name: balanceEat
-    datasource:
-        url: jdbc:mysql://localhost:3306/balanceEat?useSSL=false&serverTimezone=UTC
-        username: root
-        password: 1234
+  datasource:
+      url: jdbc:mysql://localhost:3306/balanceeat?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8&useUnicode=true
+      username: root
+      password: root
+      driver-class-name: com.mysql.cj.jdbc.Driver
+  mvc:
+    view:
+      prefix: /WEB-INF/views/
+      suffix: .jsp
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.balanceeat.demo.domain.nutrition.entity
+  configuration:
+    map-underscore-to-camel-case: true
+
+server:
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+      enabled: true
+
