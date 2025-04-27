@@ -1,7 +1,6 @@
 package com.balanceeat.demo.domain.user.entity;
 
 import java.time.LocalDateTime;
-
 import lombok.Data;
 
 @Data

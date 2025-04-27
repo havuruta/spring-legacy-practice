@@ -14,16 +14,7 @@ public class UserServiceImpl implements UserService {
     
     @Override
     public UserDTO getUserById(String userId) {
-        User user = userMapper.getUserById(userId);
-        if (user == null) {
-            return null;
-        }
-        
-        UserDTO userDTO = new UserDTO();
-        userDTO.setId(user.getId().toString());
-        userDTO.setUsername(user.getUsername());
-        userDTO.setPassword(user.getPassword());
-        return userDTO;
+        return userMapper.getUserById(userId);
     }
     
     @Override

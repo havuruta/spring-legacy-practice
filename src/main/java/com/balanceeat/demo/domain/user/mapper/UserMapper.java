@@ -6,9 +6,10 @@ import org.apache.ibatis.annotations.Mapper;
 
 @Mapper
 public interface UserMapper {
-    User getUserById(String id);
+    UserDTO getUserById(String id);
     void updateUser(UserDTO userDTO);
     void deleteUser(String id);
     User findByUsername(String username);
     void insert(User user);
+    void updateUserIsActive(String id, boolean isActive);
 }

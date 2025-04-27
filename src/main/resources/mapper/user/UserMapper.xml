@@ -3,23 +3,44 @@
 <mapper namespace="com.balanceeat.demo.domain.user.mapper.UserMapper">
     
     <!-- 사용자 정보 조회 -->
-    <select id="getUserById" parameterType="String" resultType="com.balanceeat.demo.domain.user.dto.UserDTO">
-        SELECT * FROM users WHERE user_id = #{userId}
+    <select id="getUserById" resultType="com.balanceeat.demo.domain.user.dto.UserDTO">
+        SELECT 
+            CAST(id AS CHAR) as id,
+            username,
+            password
+        FROM users 
+        WHERE id = CAST(#{id} AS SIGNED) AND is_active = true
     </select>
     
     <!-- 사용자 정보 수정 -->
     <update id="updateUser" parameterType="com.balanceeat.demo.domain.user.dto.UserDTO">
         UPDATE users 
         SET password = #{password},
-            name = #{name},
-            email = #{email},
-            phone = #{phone},
-            address = #{address}
-        WHERE user_id = #{userId}
+            updated_at = NOW()
+        WHERE id = CAST(#{id} AS SIGNED) AND is_active = true
     </update>
     
     <!-- 회원 탈퇴 -->
-    <delete id="deleteUser" parameterType="String">
-        DELETE FROM users WHERE user_id = #{userId}
-    </delete>
+    <update id="deleteUser">
+        UPDATE users
+        SET is_active = false,
+            updated_at = NOW()
+        WHERE id = CAST(#{id} AS SIGNED)
+    </update>
+
+    <update id="updateUserIsActive">
+        UPDATE users
+        SET is_active = #{isActive},
+            updated_at = NOW()
+        WHERE id = CAST(#{id} AS SIGNED)
+    </update>
+
+    <select id="findByUsername" resultType="com.balanceeat.demo.domain.user.entity.User">
+        SELECT * FROM users WHERE username = #{username} AND is_active = true
+    </select>
+
+    <insert id="insert" parameterType="com.balanceeat.demo.domain.user.entity.User">
+        INSERT INTO users (username, password, is_active, created_at, updated_at)
+        VALUES (#{username}, #{password}, #{isActive}, #{createdAt}, #{updatedAt})
+    </insert>
 </mapper> 

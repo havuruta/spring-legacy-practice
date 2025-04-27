@@ -29,7 +29,7 @@
 
     <!-- 사용자 등록 -->
     <insert id="insert" parameterType="com.balanceeat.demo.domain.user.entity.User">
-        INSERT INTO users (username, password, is_active)
-        VALUES (#{username}, #{password}, true)
+        INSERT INTO users (username, password, is_active, created_at, updated_at)
+        VALUES (#{username}, #{password}, true, NOW(), NOW())
     </insert>
 </mapper> 
