@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.balanceeat.demo.domain.user.mapper.UserMapper">
+    
+    <!-- 사용자 정보 조회 -->
+    <select id="getUserById" resultType="com.balanceeat.demo.domain.user.entity.User">
+        SELECT * FROM users WHERE id = #{id} AND is_active = true
+    </select>
+    
+    <!-- 사용자 정보 수정 -->
+    <update id="updateUser" parameterType="com.balanceeat.demo.domain.user.dto.UserDTO">
+        UPDATE users
+        SET username = #{username},
+            password = #{password}
+        WHERE id = #{id} AND is_active = true
+    </update>
+    
+    <!-- 회원 탈퇴 (비활성화) -->
+    <update id="deleteUser">
+        UPDATE users 
+        SET is_active = false
+        WHERE id = #{id}
+    </update>
+
+    <!-- 사용자명으로 사용자 조회 -->
+    <select id="findByUsername" parameterType="String" resultType="com.balanceeat.demo.domain.user.entity.User">
+        SELECT * FROM users WHERE username = #{username} AND is_active = true
+    </select>
+
+    <!-- 사용자 등록 -->
+    <insert id="insert" parameterType="com.balanceeat.demo.domain.user.entity.User">
+        INSERT INTO users (username, password, is_active)
+        VALUES (#{username}, #{password}, true)
+    </insert>
+</mapper> 
