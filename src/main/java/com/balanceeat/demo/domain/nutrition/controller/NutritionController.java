@@ -58,15 +58,20 @@ public class NutritionController {
     @GetMapping("/search")
     @Operation(summary = "영양 정보 검색", description = "설명으로 영양 정보를 검색합니다.")
     public Object searchNutritions(@RequestParam(required = false) String description, @RequestParam(required = false) String name, Model model, HttpServletRequest request) {
-        logger.info("검색어: {}", description);
+        logger.info("검색어: {}", name != null ? name : description);
         List<Nutrition> nutritions;
-        if (description != null && !description.trim().isEmpty()) {
-            nutritions = nutritionService.searchByDescription(description);
+        
+        // URL 디코딩 처리
+        String decodedName = name != null ? java.net.URLDecoder.decode(name, java.nio.charset.StandardCharsets.UTF_8) : null;
+        String decodedDescription = description != null ? java.net.URLDecoder.decode(description, java.nio.charset.StandardCharsets.UTF_8) : null;
+        
+        if (decodedDescription != null && !decodedDescription.trim().isEmpty()) {
+            nutritions = nutritionService.searchByDescription(decodedDescription);
             logger.info("검색 결과 수: {}", nutritions.size());
-        } else  if (name != null && !name.trim().isEmpty()) {
-            nutritions = nutritionService.searchByName(name);
+        } else if (decodedName != null && !decodedName.trim().isEmpty()) {
+            nutritions = nutritionService.searchByName(decodedName);
             logger.info("검색 결과 수: {}", nutritions.size());
-        }else {
+        } else {
             nutritions = nutritionService.getAllNutritions();
             logger.info("검색어가 없어 전체 목록 조회. 결과 수: {}", nutritions.size());
         }
