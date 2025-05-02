@@ -31,105 +31,14 @@
         )
     </insert>
 
-    <select id="findDietSummariesByDateRange" resultType="com.balanceeat.demo.domain.diet.entity.DietSummary">
-        WITH DietSummaries AS (
-            SELECT 
-                d.diet_date as summaryDate,
-                SUM(CASE WHEN d.meal_type = 'BREAKFAST' THEN d.calories ELSE 0 END) as breakfastCalories,
-                SUM(CASE WHEN d.meal_type = 'BREAKFAST' THEN d.protein ELSE 0 END) as breakfastProtein,
-                SUM(CASE WHEN d.meal_type = 'BREAKFAST' THEN d.fat ELSE 0 END) as breakfastFat,
-                SUM(CASE WHEN d.meal_type = 'BREAKFAST' THEN d.carbohydrates ELSE 0 END) as breakfastCarbohydrates,
-                SUM(CASE WHEN d.meal_type = 'LUNCH' THEN d.calories ELSE 0 END) as lunchCalories,
-                SUM(CASE WHEN d.meal_type = 'LUNCH' THEN d.protein ELSE 0 END) as lunchProtein,
-                SUM(CASE WHEN d.meal_type = 'LUNCH' THEN d.fat ELSE 0 END) as lunchFat,
-                SUM(CASE WHEN d.meal_type = 'LUNCH' THEN d.carbohydrates ELSE 0 END) as lunchCarbohydrates,
-                SUM(CASE WHEN d.meal_type = 'DINNER' THEN d.calories ELSE 0 END) as dinnerCalories,
-                SUM(CASE WHEN d.meal_type = 'DINNER' THEN d.protein ELSE 0 END) as dinnerProtein,
-                SUM(CASE WHEN d.meal_type = 'DINNER' THEN d.fat ELSE 0 END) as dinnerFat,
-                SUM(CASE WHEN d.meal_type = 'DINNER' THEN d.carbohydrates ELSE 0 END) as dinnerCarbohydrates,
-                SUM(d.calories) as totalCalories,
-                SUM(d.protein) as totalProtein,
-                SUM(d.fat) as totalFat,
-                SUM(d.carbohydrates) as totalCarbohydrates
-            FROM diets d
-            WHERE d.user_id = #{userId}
-            AND d.diet_date BETWEEN #{start} AND #{end}
-            GROUP BY d.diet_date
-        ),
-        BreakfastDiets AS (
-            SELECT 
-                d.diet_date,
-                JSON_ARRAYAGG(
-                    JSON_OBJECT(
-                        'id', d.id,
-                        'foodName', d.food_name,
-                        'amount', d.amount,
-                        'calories', d.calories,
-                        'protein', d.protein,
-                        'fat', d.fat,
-                        'carbohydrates', d.carbohydrates,
-                        'note', d.note
-                    )
-                ) as breakfast
-            FROM diets d
-            WHERE d.user_id = #{userId}
-            AND d.meal_type = 'BREAKFAST'
-            AND d.diet_date BETWEEN #{start} AND #{end}
-            GROUP BY d.diet_date
-        ),
-        LunchDiets AS (
-            SELECT 
-                d.diet_date,
-                JSON_ARRAYAGG(
-                    JSON_OBJECT(
-                        'id', d.id,
-                        'foodName', d.food_name,
-                        'amount', d.amount,
-                        'calories', d.calories,
-                        'protein', d.protein,
-                        'fat', d.fat,
-                        'carbohydrates', d.carbohydrates,
-                        'note', d.note
-                    )
-                ) as lunch
-            FROM diets d
-            WHERE d.user_id = #{userId}
-            AND d.meal_type = 'LUNCH'
-            AND d.diet_date BETWEEN #{start} AND #{end}
-            GROUP BY d.diet_date
-        ),
-        DinnerDiets AS (
-            SELECT 
-                d.diet_date,
-                JSON_ARRAYAGG(
-                    JSON_OBJECT(
-                        'id', d.id,
-                        'foodName', d.food_name,
-                        'amount', d.amount,
-                        'calories', d.calories,
-                        'protein', d.protein,
-                        'fat', d.fat,
-                        'carbohydrates', d.carbohydrates,
-                        'note', d.note
-                    )
-                ) as dinner
-            FROM diets d
-            WHERE d.user_id = #{userId}
-            AND d.meal_type = 'DINNER'
-            AND d.diet_date BETWEEN #{start} AND #{end}
-            GROUP BY d.diet_date
-        )
-        SELECT 
-            ds.*,
-            bd.breakfast,
-            ld.lunch,
-            dd.dinner
-        FROM DietSummaries ds
-        LEFT JOIN BreakfastDiets bd ON ds.summaryDate = bd.diet_date
-        LEFT JOIN LunchDiets ld ON ds.summaryDate = ld.diet_date
-        LEFT JOIN DinnerDiets dd ON ds.summaryDate = dd.diet_date
-        ORDER BY ds.summaryDate DESC
+    <select id="findDietsByDateRange" resultType="com.balanceeat.demo.domain.diet.entity.Diet">
+        SELECT *
+        FROM diets
+        WHERE user_id = #{userId}
+          AND diet_date BETWEEN #{start} AND #{end}
+        ORDER BY diet_date DESC, meal_type
     </select>
+
 
     <update id="updateDiet" parameterType="com.balanceeat.demo.domain.diet.entity.Diet">
         UPDATE diets

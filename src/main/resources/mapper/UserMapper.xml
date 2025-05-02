@@ -10,13 +10,12 @@
     <!-- 사용자 정보 수정 -->
     <update id="updateUser" parameterType="com.balanceeat.demo.domain.user.dto.UserDTO">
         UPDATE users
-        SET username = #{username},
-            password = #{password}
+        SET username = #{username}
         WHERE id = #{id} AND is_active = true
     </update>
     
     <!-- 회원 탈퇴 (비활성화) -->
-    <update id="deleteUser">
+    <update id="signOut">
         UPDATE users 
         SET is_active = false
         WHERE id = #{id}
