@@ -22,7 +22,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserMapper userMapper;
 
     @Override
-    public void login(LoginRequest loginRequest, HttpSession session) {
+    public User login(LoginRequest loginRequest, HttpSession session) {
         log.debug("로그인 처리 시작: {}", loginRequest.getUsername());
         User user = userMapper.findByUsername(loginRequest.getUsername());
         
@@ -41,10 +41,11 @@ public class AuthServiceImpl implements AuthService {
         userInfo.put("id", user.getId().toString());
         session.setAttribute("user", userInfo);
         log.debug("로그인 처리 완료: {}", user.getUsername());
+        return user;
     }
 
     @Override
-    public void register(RegisterRequest registerRequest) {
+    public User register(RegisterRequest registerRequest) {
         log.debug("회원가입 처리 시작: {}", registerRequest.getUsername());
         if (userMapper.findByUsername(registerRequest.getUsername()) != null) {
             log.warn("회원가입 실패 - 이미 존재하는 아이디: {}", registerRequest.getUsername());
@@ -65,5 +66,10 @@ public class AuthServiceImpl implements AuthService {
         user.setActive(true);
         userMapper.insert(user);
         log.debug("회원가입 처리 완료: {}", user.getUsername());
+        return user;
+    }
+    @Override
+    public void signOut(String userId) {
+        userMapper.deleteUser(userId);
     }
 } 

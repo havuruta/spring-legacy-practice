@@ -1,32 +1,20 @@
 package com.balanceeat.demo.domain.user.dto;
 
+import com.balanceeat.demo.domain.user.entity.User;
+import lombok.Getter;
+
+@Getter
 public class UserDTO {
-    private String id;
-    private String username;
-    private String password;
-    
-    // Getters and Setters
-    public String getId() {
-        return id;
-    }
-    
-    public void setId(String id) {
+    private final Long id;
+
+    private final String username;
+
+    public UserDTO(Long id, String username) {
         this.id = id;
-    }
-    
-    public String getUsername() {
-        return username;
-    }
-    
-    public void setUsername(String username) {
         this.username = username;
     }
-    
-    public String getPassword() {
-        return password;
+
+    public static UserDTO from (User user) {
+        return new UserDTO(user.getId(), user.getUsername());
     }
-    
-    public void setPassword(String password) {
-        this.password = password;
-    }
-} 
+}

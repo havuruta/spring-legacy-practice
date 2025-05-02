@@ -14,16 +14,20 @@ public class UserServiceImpl implements UserService {
     
     @Override
     public UserDTO getUserById(String userId) {
-        return userMapper.getUserById(userId);
+        return UserDTO.from(userMapper.getUserById(userId));
     }
     
     @Override
     public void updateUser(UserDTO userDTO) {
-        userMapper.updateUser(userDTO);
+        if (!findByUsername(userDTO.getUsername())) {
+            userMapper.updateUser(userDTO);
+        } else {
+            throw new RuntimeException("동일한 아이디가 있습니다. 다른 아이디로 변경하세요");
+        }
     }
-    
+
     @Override
-    public void deleteUser(String userId) {
-        userMapper.deleteUser(userId);
+    public boolean findByUsername(String username) {
+        return userMapper.findByUsername(username) != null;
     }
 } 
