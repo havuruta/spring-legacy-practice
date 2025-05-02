@@ -3,24 +3,26 @@ package com.balanceeat.demo.domain.diet.controller;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.function.ToDoubleFunction;
 
+import com.balanceeat.demo.domain.diet.dto.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.*;
 
 import com.balanceeat.demo.domain.diet.entity.Diet;
 import com.balanceeat.demo.domain.diet.entity.DietSummary;
 import com.balanceeat.demo.domain.diet.service.DietService;
-import com.balanceeat.demo.domain.diet.dto.DietSummaryDTO;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -30,121 +32,126 @@ import lombok.extern.slf4j.Slf4j;
 @Controller
 @RequestMapping("/diet")
 @RequiredArgsConstructor
+@Tag(name = "식단 API", description = "식단 관리 API")
 public class DietController {
 
     private final DietService dietService;
 
-    @GetMapping("/calendar")
-    public String calendarPage() {
-        return "diet/calendar";
+    private NutritionSummaryDTO buildSummary(List<Diet> diets) {
+        return NutritionSummaryDTO.builder()
+                .calories(roundSum(diets, Diet::getCalories))
+                .protein(roundSum(diets, Diet::getProtein))
+                .fat(roundSum(diets, Diet::getFat))
+                .carbohydrates(roundSum(diets, Diet::getCarbohydrates))
+                .build();
     }
 
-    @GetMapping("/summaries")
+    private int roundSum(List<Diet> diets, ToDoubleFunction<Diet> getter) {
+        if (diets == null || diets.isEmpty()) {
+            return 0;
+        }
+
+        return (int) Math.round(diets.stream()
+                .mapToDouble(diet -> {
+                    if (diet == null) return 0.0;
+                    double value = getter.applyAsDouble(diet);
+                    return Double.isNaN(value) ? 0.0 : value;
+                })
+                .sum());
+    }
+
+    @GetMapping()
     @ResponseBody
-    public ResponseEntity<List<DietSummaryDTO>> getDietSummaries(
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") LocalDate start,
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") LocalDate end,
-            HttpSession session) {
-        
-        // 세션에서 사용자 ID 가져오기
+    @Operation(summary = "식단 목록 조회", description = "지정된 기간 동안의 식단 목록을 조회합니다.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "식단 목록 조회 성공",
+            content = @Content(schema = @Schema(implementation = DietByDateDTO.class))),
+        @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
+        @ApiResponse(responseCode = "500", description = "서버 내부 오류")
+    })
+    public ResponseEntity<List<DietByDateDTO>> getDietSummaries(
+        @Parameter(description = "조회 시작일 (yyyy-MM-dd)", required = true)
+        @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate start,
+        @Parameter(description = "조회 종료일 (yyyy-MM-dd)", required = true)
+        @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate end,
+        HttpSession session) {
+
         Map<String, String> userInfo = (Map<String, String>) session.getAttribute("user");
         if (userInfo == null || userInfo.get("id") == null) {
-            log.warn("로그인되지 않은 사용자가 식단 요약을 요청했습니다.");
-            return ResponseEntity.ok().body(List.of());
+            return ResponseEntity.status(401).build();
         }
         Long userId = Long.parseLong(userInfo.get("id"));
-        
-        log.info("식단 요약 조회: 사용자 ID={}, 기간={} ~ {}", userId, start, end);
-        
-        List<DietSummary> summaries = dietService.getDietSummariesByDateRange(userId, start, end);
-        List<DietSummaryDTO> dtos = summaries.stream()
-                .map(DietSummaryDTO::fromEntity)
-                .toList();
-        
-        return ResponseEntity.ok().body(dtos);
-    }
-    
-    @PostMapping("/add")
-    @ResponseBody
-    public ResponseEntity<?> addDiet(@RequestBody Map<String, Object> dietData, HttpSession session) {
-        try {
-            // 세션에서 사용자 ID 가져오기
-            Map<String, String> userInfo = (Map<String, String>) session.getAttribute("user");
-            if (userInfo == null || userInfo.get("id") == null) {
-                return ResponseEntity.status(401).body("로그인이 필요합니다.");
-            }
-            Long userId = Long.parseLong(userInfo.get("id"));
-            
-            // 식단 데이터 생성
-            Diet diet = new Diet();
-            diet.setUserId(userId);
-            diet.setDietDate(LocalDate.parse((String) dietData.get("dietDate")));
-            diet.setMealType((String) dietData.get("mealType"));
-            diet.setFoodName((String) dietData.get("foodName"));
-            diet.setAmount(Double.parseDouble(dietData.get("amount").toString()));
-            diet.setCalories(Double.parseDouble(dietData.get("calories").toString()));
-            diet.setProtein(Double.parseDouble(dietData.get("protein").toString()));
-            diet.setFat(Double.parseDouble(dietData.get("fat").toString()));
-            diet.setCarbohydrates(Double.parseDouble(dietData.get("carbohydrates").toString()));
-            diet.setNote((String) dietData.get("note"));
-            
-            
-            // 식단 추가
-            dietService.addDiet(diet);
-            
-            return ResponseEntity.ok().body("식단이 추가되었습니다.");
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("식단 추가 중 오류가 발생했습니다: " + e.getMessage());
-        }
+        List<DietByDateDTO> response = dietService.getDietSummariesByDateRange(userId, start, end);
+        return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/update/{id}")
+    @PostMapping()
     @ResponseBody
-    public ResponseEntity<?> updateDiet(@PathVariable Long id, @RequestBody Map<String, Object> dietData, HttpSession session) {
+    @Operation(summary = "식단 추가", description = "새로운 식단을 추가합니다.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "식단 추가 성공"),
+        @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
+        @ApiResponse(responseCode = "500", description = "서버 내부 오류")
+    })
+    public ResponseEntity<?> addDiet(
+        @Parameter(description = "추가할 식단 정보", required = true)
+        @RequestBody DietRequestDTO dto,
+        HttpSession session) {
+        Map<String, String> userInfo = (Map<String, String>) session.getAttribute("user");
+        if (userInfo == null || userInfo.get("id") == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
+        }
+
+        Long userId = Long.parseLong(userInfo.get("id"));
+        dietService.addDiet(dto.toEntity(userId));
+        return ResponseEntity.ok("식단이 추가되었습니다.");
+    }
+
+    @PutMapping("/{id}")
+    @ResponseBody
+    @Operation(summary = "식단 수정", description = "기존 식단을 수정합니다.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "식단 수정 성공"),
+        @ApiResponse(responseCode = "400", description = "잘못된 요청"),
+        @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
+        @ApiResponse(responseCode = "500", description = "서버 내부 오류")
+    })
+    public ResponseEntity<?> updateDiet(
+        @Parameter(description = "식단 ID", required = true)
+        @PathVariable Long id,
+        @Parameter(description = "수정할 식단 정보", required = true)
+        @RequestBody DietUpdateRequestDTO dto,
+        HttpSession session) {
         try {
-            log.info("식단 수정 요청 수신: ID={}, 데이터={}", id, dietData);
-            
             Map<String, String> userInfo = (Map<String, String>) session.getAttribute("user");
             if (userInfo == null || userInfo.get("id") == null) {
-                log.warn("로그인되지 않은 사용자가 식단 수정을 시도했습니다.");
                 return ResponseEntity.status(401).body("로그인이 필요합니다.");
             }
-            
-            Diet diet = new Diet();
-            diet.setId(id);
-            diet.setAmount(Double.parseDouble(dietData.get("amount").toString()));
-            
-            log.info("수정할 식단 정보: {}", diet);
+
+            Diet diet = Diet.builder().id(id).build();
+            diet.updateFrom(dto);
+
             dietService.updateDiet(diet);
-            return ResponseEntity.ok().body("식단이 수정되었습니다.");
+            return ResponseEntity.ok("식단이 수정되었습니다.");
         } catch (Exception e) {
             log.error("식단 수정 중 오류 발생", e);
             return ResponseEntity.badRequest().body("식단 수정 중 오류가 발생했습니다: " + e.getMessage());
         }
     }
 
-    @GetMapping("/list")
+    @DeleteMapping("/{id}")
     @ResponseBody
-    public ResponseEntity<List<Diet>> getDietsByDate(
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date,
-            HttpSession session) {
-        try {
-            Map<String, String> userInfo = (Map<String, String>) session.getAttribute("user");
-            if (userInfo == null || userInfo.get("id") == null) {
-                return ResponseEntity.status(401).body(null);
-            }
-            Long userId = Long.parseLong(userInfo.get("id"));
-            
-            List<Diet> diets = dietService.getDietsByDate(userId, date);
-            return ResponseEntity.ok().body(diets);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(null);
-        }
-    }
-
-    @DeleteMapping("/delete/{id}")
-    @ResponseBody
-    public ResponseEntity<String> deleteDiet(@PathVariable Long id, HttpSession session) {
+    @Operation(summary = "식단 삭제", description = "기존 식단을 삭제합니다.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "식단 삭제 성공"),
+        @ApiResponse(responseCode = "400", description = "잘못된 요청"),
+        @ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
+        @ApiResponse(responseCode = "500", description = "서버 내부 오류")
+    })
+    public ResponseEntity<String> deleteDiet(
+        @Parameter(description = "식단 ID", required = true)
+        @PathVariable Long id,
+        HttpSession session) {
         try {
             Map<String, String> userInfo = (Map<String, String>) session.getAttribute("user");
             if (userInfo == null || userInfo.get("id") == null) {
@@ -157,27 +164,4 @@ public class DietController {
             return ResponseEntity.badRequest().body("식단 삭제 중 오류가 발생했습니다: " + e.getMessage());
         }
     }
-
-    @GetMapping("/edit")
-    @ResponseBody
-    public ResponseEntity<List<Diet>> getDietsForEdit(
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date,
-            HttpSession session) {
-        try {
-            Map<String, String> userInfo = (Map<String, String>) session.getAttribute("user");
-            if (userInfo == null || userInfo.get("id") == null) {
-                return ResponseEntity.status(401).body(null);
-            }
-            Long userId = Long.parseLong(userInfo.get("id"));
-            
-            log.info("식단 조회 요청: 날짜={}, 사용자 ID={}", date, userId);
-            List<Diet> diets = dietService.getDietsByDate(userId, date);
-            log.info("조회된 식단 수: {}", diets.size());
-            
-            return ResponseEntity.ok().body(diets);
-        } catch (Exception e) {
-            log.error("식단 조회 중 오류 발생", e);
-            return ResponseEntity.badRequest().body(null);
-        }
-    }
-} 
+}
